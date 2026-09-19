@@ -13,7 +13,8 @@ ROOT = Path(__file__).resolve().parent.parent
 LAUNCHER = ROOT / "scripts" / "python" / "charter.py"
 BASH_DIR = ROOT / "scripts" / "bash"
 FIXTURES = ROOT / "tests" / "fixtures"
-HAS_BASH = shutil.which("bash") is not None
+BASH_EXE = shutil.which("bash")
+HAS_BASH = BASH_EXE is not None
 
 
 @pytest.fixture(scope="module")
@@ -49,8 +50,13 @@ def run_launcher(*args: str, stdin: str | None = None, cwd: Path | None = None):
 
 
 def run_direct(script: str, *args: str, stdin: str | None = None, cwd: Path | None = None):
+    # Use the resolved BASH_EXE path rather than the bare "bash" command: on
+    # Windows, subprocess/CreateProcess searches %SystemRoot% (which holds the
+    # WSL launcher stub bash.exe when the WSL optional feature is enabled)
+    # before PATH, regardless of PATH order. shutil.which("bash") instead
+    # walks PATH itself, so it is the executable HAS_BASH actually vouches for.
     return subprocess.run(
-        ["bash", str(BASH_DIR / f"{script}.sh"), *args],
+        [BASH_EXE, str(BASH_DIR / f"{script}.sh"), *args],
         input=stdin, capture_output=True, text=True, encoding="utf-8", cwd=cwd,
     )
 
@@ -292,3 +298,60 @@ class TestRunBash:
         monkeypatch.setattr(launcher.subprocess, "run", fake_run)
         assert launcher.run_bash("/nope/bash", tmp_path / "x.sh", []) == 1
         assert "❌ ERROR: failed to start bash (/nope/bash): no such file" in capsys.readouterr().err
+
+
+# ── Real scripts through the launcher (requires bash) ───────────────────────
+
+requires_bash = pytest.mark.skipif(not HAS_BASH, reason="bash not on PATH")
+
+
+@requires_bash
+class TestLauncherSubprocess:
+    @pytest.mark.parametrize("script", ["state-check", "fragment-list", "registry-validate"])
+    def test_parity_with_direct_bash_call(self, project, script):
+        root = project.as_posix()
+        direct = run_direct(script, root)
+        via = run_launcher(script, root)
+        assert via.returncode == direct.returncode, via.stderr
+        assert via.stdout == direct.stdout
+        assert via.stderr == direct.stderr
+
+    def test_heredoc_stdin_reaches_state_write(self, project):
+        state = 'fragments:\n  - "global/compliance"\nlocal_constitution: false\n'
+        result = run_launcher("state-write", project.as_posix(), stdin=state)
+        assert result.returncode == 0, result.stderr
+        assert result.stdout.startswith("State saved to:")
+        written = (project / ".specify" / "charter" / "state.yml").read_text(encoding="utf-8")
+        assert written.replace("\r\n", "\n") == state
+
+    def test_piped_stdin_reaches_heading_normalize(self):
+        result = run_launcher("heading-normalize", "2", stdin="# Title\ntext\n")
+        assert result.returncode == 0, result.stderr
+        assert result.stdout == "## Title\ntext\n"
+
+    def test_exit_code_passthrough(self, project):
+        # No snapshot exists for this fragment → snapshot-compare exits 2.
+        result = run_launcher("snapshot-compare", "global/compliance", "fragment", project.as_posix())
+        assert result.returncode == 2
+
+    def test_unknown_script_via_subprocess(self):
+        result = run_launcher("no-such-script")
+        assert result.returncode == 1
+        assert result.stderr.strip() == "❌ ERROR: Unknown charter script: no-such-script"
+
+    def test_no_argument_via_subprocess(self):
+        result = run_launcher()
+        assert result.returncode == 1
+        assert "state-check" in result.stdout
+
+    def test_missing_bash_is_reported(self, project, monkeypatch):
+        # Point CHARTER_BASH at nothing and hide PATH so discovery fails.
+        env = {"CHARTER_BASH": str(project / "nope"), "PATH": str(project)}
+        if sys.platform == "win32":
+            env["SystemRoot"] = "C:\\Windows"
+        result = subprocess.run(
+            [sys.executable, str(LAUNCHER), "state-check", project.as_posix()],
+            capture_output=True, text=True, encoding="utf-8", env=env,
+        )
+        assert result.returncode == 1
+        assert "needs bash to run 'state-check'" in result.stderr
