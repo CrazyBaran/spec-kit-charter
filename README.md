@@ -43,6 +43,25 @@ specify extension add charter
 specify extension add charter --from https://github.com/Fyloss/spec-kit-charter/archive/refs/tags/v0.5.1.zip
 ```
 
+## Script Runtimes
+
+Spec Kit projects choose a script runtime at `specify init` time (`--script sh|ps|py`).
+Charter supports:
+
+| Runtime | What runs | Requirements |
+|---|---|---|
+| `sh` (default) | `scripts/bash/charter.sh` dispatches to the bash helper scripts | bash, coreutils, `awk`, `sed`, `find` |
+| `py` | `scripts/python/charter.py` launches the same helper scripts | Python ≥ 3.11 **and** bash. On Windows install [Git for Windows](https://gitforwindows.org/); the launcher finds its bash automatically even when it is not on `PATH`. |
+
+Projects initialised with `--script ps` fall back to the `sh` runtime and need
+bash on `PATH`.
+
+The `py` launcher still runs the bash scripts in this release. Helper scripts
+will be ported to native Python incrementally; once a port exists the launcher
+uses it automatically. Set `CHARTER_BASH=/path/to/bash` to override bash
+discovery. `py` routing requires Spec Kit ≥ 0.12.4; older versions ignore the
+`py:` entry and use bash.
+
 ## Quick Start
 
 ### 1. Set Up a Registry

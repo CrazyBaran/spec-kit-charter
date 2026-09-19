@@ -82,6 +82,58 @@ prompt for them. This lets package owners update their rules and have a plain
 `compose update` or per-package update commands. Only fragments retain the
 snapshot mechanism.
 
+## Script Runtimes
+
+Command files never name a helper script path directly. Each frontmatter
+declares one dispatcher per runtime and every invocation in the body is
+`{SCRIPT} <script-name> [args…]`:
+
+```yaml
+scripts:
+  sh: bash scripts/bash/charter.sh
+  py: scripts/python/charter.py
+```
+
+At install time Spec Kit substitutes `{SCRIPT}` with the dispatcher matching
+the project's script type (and, for `py`, prefixes the Python interpreter it
+resolved), so `{SCRIPT} state-check “$(pwd)”` becomes either
+`bash .specify/extensions/charter/scripts/bash/charter.sh state-check “$(pwd)”`
+or `python3 .specify/extensions/charter/scripts/python/charter.py state-check “$(pwd)”`.
+
+### `charter.sh`
+
+Validates the name (`^[a-z0-9-]+$`, not `charter`/`charter-common`, file must
+exist) and `exec`s `scripts/bash/<name>.sh “$@”`. stdin, stdout, stderr and the
+exit code are those of the helper script.
+
+### `charter.py`
+
+1. If `scripts/python/<name_with_underscores>.py` exists, imports it and calls
+   `main(argv) -> int` in-process.
+2. Otherwise locates bash: `CHARTER_BASH`, then Git for Windows (walking up from
+   `git --exec-path`), then `PATH` while rejecting the WSL launcher under
+   `%SystemRoot%`; and runs `bash scripts/bash/<name>.sh` with stdio inherited.
+   On Windows, arguments shaped like `X:\…` are rewritten to forward slashes and
+   `MSYS_NO_PATHCONV=1` is set so Git Bash forwards them unchanged.
+
+### Native module contract (porting a script to Python)
+
+- File: `scripts/python/<snake_name>.py`, where `snake_name` is the bash name
+  with `-` replaced by `_` (`state-check.sh` → `state_check.py`).
+- Interface: `main(argv: list[str]) -> int`; `argv` excludes the script name and
+  must accept exactly the arguments the bash twin accepts, in the same order,
+  with the same defaults.
+- Output: byte-identical stdout, stderr and exit code to the bash twin for every
+  input the command bodies produce. Open text with `newline=””` to preserve CRLF;
+  sort by UTF-8 bytes to match `sort` under the CI locale.
+- Shared helpers belong in `scripts/python/charter_common.py` (port of
+  `charter-common.sh`); the launcher never dispatches to it.
+- Every port lands with parity tests that run the bash script and the Python
+  module against twin fixture projects and assert equal output after path
+  normalisation.
+- No command file or frontmatter change is needed: the launcher prefers the
+  module as soon as the file exists.
+
 ## Data Flow
 
 ### Configuration Flow
