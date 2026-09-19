@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Minimum Spec Kit version raised to 0.12.6.** The command files now rely on
+  Spec Kit's `{SCRIPT}` placeholder and extension-local script path rewriting,
+  which older releases do not perform.
 - **BREAKING: Registry sub-constitution filenames now use `_` (underscore) as
   the path separator instead of `-` (dash).** The `WHEN WORKING ON` path is now
   derived by replacing `_` with `/` in the filename stem, leaving `-` free for

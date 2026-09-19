@@ -59,8 +59,9 @@ bash on `PATH`.
 The `py` launcher still runs the bash scripts in this release. Helper scripts
 will be ported to native Python incrementally; once a port exists the launcher
 uses it automatically. Set `CHARTER_BASH=/path/to/bash` to override bash
-discovery. `py` routing requires Spec Kit ≥ 0.12.4; older versions ignore the
-`py:` entry and use bash.
+discovery. Charter 0.6.0 requires Spec Kit ≥ 0.12.6, the first release that
+rewrites extension-local script paths correctly (the `py` script type itself
+arrived in 0.12.4).
 
 ## Quick Start
 

@@ -13,18 +13,25 @@ ROOT = Path(__file__).resolve().parent.parent
 LAUNCHER = ROOT / "scripts" / "python" / "charter.py"
 BASH_DIR = ROOT / "scripts" / "bash"
 FIXTURES = ROOT / "tests" / "fixtures"
-BASH_EXE = shutil.which("bash")
+
+
+def _load_launcher():
+    spec = importlib.util.spec_from_file_location("charter_launcher", LAUNCHER)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+_LAUNCHER = _load_launcher()
+BASH_EXE = _LAUNCHER.find_bash()
 HAS_BASH = BASH_EXE is not None
 
 
 @pytest.fixture(scope="module")
 def launcher():
     """Load scripts/python/charter.py as a module (scripts/python is not a package)."""
-    spec = importlib.util.spec_from_file_location("charter_launcher", LAUNCHER)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
+    return _LAUNCHER
 
 
 @pytest.fixture

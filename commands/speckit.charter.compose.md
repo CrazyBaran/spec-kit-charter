@@ -380,8 +380,8 @@ When the target is a registry sub-constitution, its state ID has the form `sub-c
 For full compose (CREATION or RECREATION MODE), read ALL fragments and sub-constitutions and build the complete constitution content.
 
 For each **fragment** listed in `state.yml`, read the content from:
-- **CREATION MODE / UPDATE MODE** — the registry: `fragment-read.sh <NAME> fragment "$(pwd)"`
-- **RECREATION MODE** — the snapshot: `snapshot-read.sh <NAME> fragment "$(pwd)"` (exit code `2` means the snapshot is missing; fall back to `fragment-read.sh`)
+- **CREATION MODE / UPDATE MODE** — the registry: `{SCRIPT} fragment-read <NAME> fragment "$(pwd)"`
+- **RECREATION MODE** — the snapshot: `{SCRIPT} snapshot-read <NAME> fragment "$(pwd)"` (exit code `2` means the snapshot is missing; fall back to `fragment-read.sh`)
 
 For each **registry sub-constitution** listed in `sub_constitutions`, ALWAYS read the latest content from the registry (cacheless — no snapshot fallback).
 
