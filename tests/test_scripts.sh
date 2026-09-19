@@ -1073,6 +1073,66 @@ EOF
 
 test_snapshot_compare_fence_aware
 
+# ── Dispatcher ────────────────────────────────────────────────────────────
+
+section "charter.sh (dispatcher)"
+
+test_dispatcher() {
+  setup
+  local direct dispatched rc help
+
+  direct="$(bash "${SCRIPTS_DIR}/state-check.sh" "${TMP_DIR}/project" 2>&1)"
+  dispatched="$(bash "${SCRIPTS_DIR}/charter.sh" state-check "${TMP_DIR}/project" 2>&1)"
+  if [[ "$direct" == "$dispatched" ]]; then
+    pass "charter.sh: dispatches state-check with identical output"
+  else
+    fail "charter.sh: dispatches state-check with identical output" "direct: $direct | dispatched: $dispatched"
+  fi
+
+  # stdin must reach the dispatched script (state-write reads its state from stdin)
+  echo 'fragments:
+  - "global/compliance"' | bash "${SCRIPTS_DIR}/charter.sh" state-write "${TMP_DIR}/project" >/dev/null 2>&1
+  if grep -q "global/compliance" "${TMP_DIR}/project/.specify/charter/state.yml" 2>/dev/null; then
+    pass "charter.sh: forwards stdin to the dispatched script"
+  else
+    fail "charter.sh: forwards stdin to the dispatched script"
+  fi
+
+  rc=0
+  bash "${SCRIPTS_DIR}/charter.sh" no-such-script >/dev/null 2>&1 || rc=$?
+  if [[ "$rc" -eq 1 ]]; then
+    pass "charter.sh: unknown script exits 1"
+  else
+    fail "charter.sh: unknown script exits 1" "exit code: $rc"
+  fi
+
+  rc=0
+  bash "${SCRIPTS_DIR}/charter.sh" charter-common >/dev/null 2>&1 || rc=$?
+  if [[ "$rc" -eq 1 ]]; then
+    pass "charter.sh: refuses charter-common"
+  else
+    fail "charter.sh: refuses charter-common" "exit code: $rc"
+  fi
+
+  rc=0
+  bash "${SCRIPTS_DIR}/charter.sh" >/dev/null 2>&1 || rc=$?
+  if [[ "$rc" -eq 1 ]]; then
+    pass "charter.sh: no argument exits 1"
+  else
+    fail "charter.sh: no argument exits 1" "exit code: $rc"
+  fi
+
+  rc=0
+  help="$(bash "${SCRIPTS_DIR}/charter.sh" --help 2>&1)" || rc=$?
+  if [[ "$rc" -eq 0 ]] && echo "$help" | grep -q "state-check" && ! echo "$help" | grep -q "charter-common"; then
+    pass "charter.sh: --help lists scripts and hides charter-common"
+  else
+    fail "charter.sh: --help lists scripts and hides charter-common" "exit code: $rc, output: $help"
+  fi
+}
+
+test_dispatcher
+
 # ── Summary ───────────────────────────────────────────────────────────────
 
 echo ""
