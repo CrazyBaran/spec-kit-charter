@@ -105,6 +105,7 @@ def run_native(name: str, module_path: Path, args: list[str]) -> int:
         if not callable(entry):
             raise AttributeError("module has no main(argv) function")
         result = entry(list(args))
+        return int(result or 0)
     except SystemExit as exc:
         code = exc.code
         if code is None:
@@ -116,7 +117,6 @@ def run_native(name: str, module_path: Path, args: list[str]) -> int:
     except Exception as exc:  # noqa: BLE001 — any failure must become a clean exit code
         _err(f"❌ ERROR: charter script '{name}' failed: {exc}")
         return 1
-    return int(result or 0)
 
 
 # ── Bash execution (completed in the next task) ──────────────────────────────

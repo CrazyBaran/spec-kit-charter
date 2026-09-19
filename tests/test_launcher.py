@@ -119,6 +119,12 @@ class TestRunNative:
         assert launcher.run_native("boom", module, []) == 1
         assert "❌ ERROR: charter script 'boom' failed: boom" in capsys.readouterr().err
 
+    def test_non_numeric_return_reports_failure(self, launcher, tmp_path, capsys):
+        module = tmp_path / "weird.py"
+        module.write_text("def main(argv):\n    return 'not-a-code'\n", encoding="utf-8")
+        assert launcher.run_native("weird", module, []) == 1
+        assert "❌ ERROR: charter script 'weird' failed:" in capsys.readouterr().err
+
 
 class TestMainDispatch:
     def test_no_argument_prints_usage_and_exits_1(self, launcher, capsys):
