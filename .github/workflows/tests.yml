@@ -28,8 +28,67 @@ jobs:
         run: pip install pytest pyyaml
 
       - name: Run Python tests
-        run: pytest tests/test_manifest.py -v
+        run: pytest tests/ -v
 
       - name: Run shell script tests
         shell: bash
         run: bash tests/test_scripts.sh
+
+  e2e:
+    name: e2e (${{ matrix.os }}, --script py)
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Spec Kit CLI
+        run: pip install specify-cli==1.0.8
+
+      - name: Initialise a --script py project and install charter from source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${RUNNER_TEMP}"
+          specify init e2e --integration copilot --script py --ignore-agent-tools
+          cd e2e
+          specify extension add --dev "${GITHUB_WORKSPACE}"
+          specify extension list
+
+      - name: Assert charter commands were registered with the Python launcher
+        shell: bash
+        run: |
+          python - "${RUNNER_TEMP}/e2e" <<'EOF'
+          import pathlib, sys
+          root = pathlib.Path(sys.argv[1]) / ".github"
+          files = [p for p in root.rglob("*") if p.is_file()]
+          def has(p, needle):
+              return needle in p.read_text(encoding="utf-8", errors="replace")
+          rendered = [p for p in files if has(p, "scripts/python/charter.py")]
+          stale = [p for p in files if has(p, "bash .specify/extensions/charter/scripts/bash/")]
+          print("rendered charter files:")
+          for p in rendered:
+              print("  ", p.relative_to(root))
+          assert len(rendered) >= 5, f"expected >=5 rendered charter files, got {len(rendered)}"
+          assert not stale, f"stale bash invocations in: {[str(p) for p in stale]}"
+          EOF
+
+      - name: Run a rendered invocation end to end
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${RUNNER_TEMP}/e2e"
+          line="$(grep -Rh 'charter\.py state-check "\$(pwd)"' .github | head -1 | sed 's/^[[:space:]]*//')"
+          echo "running: ${line}"
+          out="$(eval "${line}")"
+          echo "${out}"
+          [[ "${out}" == "STATE_EXISTS=false" ]]
