@@ -31,6 +31,7 @@ import re
 import shutil
 import subprocess
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -119,16 +120,88 @@ def run_native(name: str, module_path: Path, args: list[str]) -> int:
         return 1
 
 
-# ── Bash execution (completed in the next task) ──────────────────────────────
+# ── Bash execution ───────────────────────────────────────────────────────────
+
+WIN_PATH_RE = re.compile(r"^[A-Za-z]:[\\/]")
 
 
-def find_bash() -> str | None:
-    return shutil.which("bash")
+def normalize_arg(arg: str, windows: bool = IS_WINDOWS) -> str:
+    """On Windows, turn ``X:\\a\\b`` into ``X:/a/b``; everything else passes through."""
+    if windows and WIN_PATH_RE.match(arg):
+        return arg.replace("\\", "/")
+    return arg
 
 
-def run_bash(bash: str, script: Path, args: list[str]) -> int:
+def _is_under_system_root(path: Path, env: Mapping[str, str]) -> bool:
+    """True when ``path`` lives under %SystemRoot% (the WSL launcher location)."""
+    system_root = env.get("SystemRoot") or env.get("SYSTEMROOT")
+    if not system_root:
+        return False
     try:
-        return subprocess.run([bash, script.as_posix(), *args]).returncode
+        return Path(path).resolve().is_relative_to(Path(system_root).resolve())
+    except OSError:
+        return False
+
+
+def _git_for_windows_bash(exec_path: Path | None = None) -> Path | None:
+    """Locate Git for Windows' bash by walking up from ``git --exec-path``."""
+    if exec_path is None:
+        git = shutil.which("git")
+        if git is None:
+            return None
+        try:
+            probe = subprocess.run([git, "--exec-path"], capture_output=True, text=True, timeout=15)
+        except (OSError, subprocess.SubprocessError):
+            return None
+        if probe.returncode != 0 or not probe.stdout.strip():
+            return None
+        exec_path = Path(probe.stdout.strip())
+
+    current = exec_path
+    for _ in range(4):
+        current = current.parent
+        for relative in ("bin/bash.exe", "usr/bin/bash.exe"):
+            candidate = current / relative
+            if candidate.is_file():
+                return candidate
+    return None
+
+
+def find_bash(
+    env: Mapping[str, str] | None = None,
+    windows: bool = IS_WINDOWS,
+    which=shutil.which,
+    git_bash=_git_for_windows_bash,
+) -> str | None:
+    """Locate a bash interpreter: CHARTER_BASH, Git for Windows, then PATH (not WSL)."""
+    env = os.environ if env is None else env
+
+    override = env.get("CHARTER_BASH")
+    if override:
+        candidate = Path(override)
+        if candidate.is_file():
+            return str(candidate)
+
+    if windows:
+        from_git = git_bash()
+        if from_git is not None:
+            return str(from_git)
+
+    found = which("bash")
+    if found and not (windows and _is_under_system_root(Path(found), env)):
+        return found
+    return None
+
+
+def run_bash(bash: str, script: Path, args: list[str], windows: bool = IS_WINDOWS) -> int:
+    """Run ``script`` with ``bash``, inheriting stdio; return the child's exit code."""
+    env = dict(os.environ)
+    if windows:
+        env["MSYS_NO_PATHCONV"] = "1"
+        env["MSYS2_ARG_CONV_EXCL"] = "*"
+    command = [bash, script.as_posix(), *(normalize_arg(arg, windows) for arg in args)]
+    try:
+        return subprocess.run(command, env=env).returncode
     except KeyboardInterrupt:
         return 130
     except OSError as exc:
