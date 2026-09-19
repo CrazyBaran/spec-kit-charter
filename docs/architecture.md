@@ -57,7 +57,7 @@ The marker format is backwards-compatible: `constitution-parse.sh` and `constitu
 ### 4. Snapshot-Based Change Detection (fragments only)
 
 Rather than tracking fragment hashes, Charter saves full **fragment** content as
-“snapshots” after each compose. On subsequent composes, it compares each fragment
+"snapshots" after each compose. On subsequent composes, it compares each fragment
 section in the constitution against its snapshot to detect local modifications.
 This approach:
 
@@ -70,7 +70,7 @@ This approach:
 Both the normalization (`heading-normalize.sh`) and the comparison (`snapshot-compare.sh`) are **fence-aware**: lines inside fenced code blocks (` ``` ` / `~~~`) are never treated as headings. This prevents `#`-prefixed shell/Python/YAML comments inside code samples from corrupting heading-level calculations or producing false negatives in drift detection.
 
 Sub-constitutions (registry and distributed) are intentionally **not**
-snapshotted — see “Cacheless sub-constitutions” below.
+snapshotted — see "Cacheless sub-constitutions" below.
 
 ### 5. Cacheless Sub-Constitutions
 
@@ -96,14 +96,14 @@ scripts:
 
 At install time Spec Kit substitutes `{SCRIPT}` with the dispatcher matching
 the project's script type (and, for `py`, prefixes the Python interpreter it
-resolved), so `{SCRIPT} state-check “$(pwd)”` becomes either
-`bash .specify/extensions/charter/scripts/bash/charter.sh state-check “$(pwd)”`
-or `python3 .specify/extensions/charter/scripts/python/charter.py state-check “$(pwd)”`.
+resolved), so `{SCRIPT} state-check "$(pwd)"` becomes either
+`bash .specify/extensions/charter/scripts/bash/charter.sh state-check "$(pwd)"`
+or `python3 .specify/extensions/charter/scripts/python/charter.py state-check "$(pwd)"`.
 
 ### `charter.sh`
 
 Validates the name (`^[a-z0-9-]+$`, not `charter`/`charter-common`, file must
-exist) and `exec`s `scripts/bash/<name>.sh “$@”`. stdin, stdout, stderr and the
+exist) and `exec`s `scripts/bash/<name>.sh "$@"`. stdin, stdout, stderr and the
 exit code are those of the helper script.
 
 ### `charter.py`
@@ -124,7 +124,7 @@ exit code are those of the helper script.
   must accept exactly the arguments the bash twin accepts, in the same order,
   with the same defaults.
 - Output: byte-identical stdout, stderr and exit code to the bash twin for every
-  input the command bodies produce. Open text with `newline=””` to preserve CRLF;
+  input the command bodies produce. Open text with `newline=""` to preserve CRLF;
   sort by UTF-8 bytes to match `sort` under the CI locale.
 - Shared helpers belong in `scripts/python/charter_common.py` (port of
   `charter-common.sh`); the launcher never dispatches to it.
