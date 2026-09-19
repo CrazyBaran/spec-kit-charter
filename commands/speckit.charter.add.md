@@ -1,7 +1,8 @@
 ---
 description: "Add a new fragment from the registry to the composition and rebuild the constitution"
 scripts:
-  sh: ../../scripts/bash/charter-common.sh
+  sh: bash scripts/bash/charter.sh
+  py: scripts/python/charter.py
 ---
 
 # Charter Add
@@ -24,7 +25,7 @@ The argument MAY be the name of a fragment, registry sub-constitution, or distri
 ### Step 1: Validate State
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/state-check.sh "$(pwd)"
+{SCRIPT} state-check "$(pwd)"
 ```
 
 If the output is `STATE_EXISTS=false`, the charter is not configured — display the
@@ -41,11 +42,11 @@ Run /speckit.charter.config first to configure the registry and select fragments
 echo "=== ALL REGISTRY FRAGMENTS & SUB-CONSTITUTIONS ==="
 # Tab-separated: TYPE<TAB>CATEGORY<TAB>PATH<TAB>NAME
 # TYPE = mandatory_fragment | recommended_fragment | fragment | sub-constitution
-bash .specify/extensions/charter/scripts/bash/fragment-list.sh "$(pwd)"
+{SCRIPT} fragment-list "$(pwd)"
 
 echo "=== DISTRIBUTED SUB-CONSTITUTIONS (only relevant when enabled) ==="
 # One package path per line (e.g. packages/back)
-bash .specify/extensions/charter/scripts/bash/distributed-detect.sh "$(pwd)"
+{SCRIPT} distributed-detect "$(pwd)"
 ```
 
 The currently selected fragments, sub-constitutions, and distributed
@@ -187,15 +188,15 @@ FRAG_NAME="<NEW_ITEM_NAME>"
 TYPE="<TYPE>"   # fragment | sub-constitution | distributed
 
 if [[ "$TYPE" == "fragment" ]]; then
-  bash .specify/extensions/charter/scripts/bash/snapshot-save.sh "$FRAG_NAME" "fragment" "$(pwd)"
+  {SCRIPT} snapshot-save "$FRAG_NAME" "fragment" "$(pwd)"
   echo "CONTENT:"
-  bash .specify/extensions/charter/scripts/bash/fragment-read.sh "$FRAG_NAME" "fragment" "$(pwd)"
+  {SCRIPT} fragment-read "$FRAG_NAME" "fragment" "$(pwd)"
 elif [[ "$TYPE" == "sub-constitution" ]]; then
   echo "CONTENT (cacheless — read fresh at compose):"
-  bash .specify/extensions/charter/scripts/bash/fragment-read.sh "$FRAG_NAME" "sub-constitution" "$(pwd)"
+  {SCRIPT} fragment-read "$FRAG_NAME" "sub-constitution" "$(pwd)"
 else # distributed
   echo "CONTENT (cacheless — read fresh at compose):"
-  bash .specify/extensions/charter/scripts/bash/distributed-read.sh "$FRAG_NAME" "$(pwd)"
+  {SCRIPT} distributed-read "$FRAG_NAME" "$(pwd)"
 fi
 ```
 

@@ -1,7 +1,8 @@
 ---
 description: "Compose and generate the project constitution from selected charter fragments"
 scripts:
-  sh: ../../scripts/bash/charter-common.sh
+  sh: bash scripts/bash/charter.sh
+  py: scripts/python/charter.py
 ---
 
 # Charter Compose
@@ -26,7 +27,7 @@ Parse arguments for:
 ### Step 1: Validate State (with inline configuration fallback)
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/state-check.sh "$(pwd)"
+{SCRIPT} state-check "$(pwd)"
 ```
 
 **If the state file exists (`STATE_EXISTS=true`):** the charter is already
@@ -62,7 +63,7 @@ standalone config command — do not skip it). Check for an existing registry
 configuration to propose as the default; otherwise propose `.charter`:
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/registry-default.sh "$(pwd)"
+{SCRIPT} registry-default "$(pwd)"
 ```
 
 Present the current/default registry to the user and let them confirm it or
@@ -70,14 +71,14 @@ enter a new value (relative path, absolute path, or git URL). Then write the
 configuration:
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/config-write.sh "<REGISTRY_VALUE>" "$(pwd)"
+{SCRIPT} config-write "<REGISTRY_VALUE>" "$(pwd)"
 ```
 
 Validate the registry (clones/refreshes git registries, resolves the local path,
 and checks `manifest.yml` and its required fields):
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/registry-validate.sh "$(pwd)"
+{SCRIPT} registry-validate "$(pwd)"
 ```
 
 If validation fails (non-zero exit), display the error and stop. If it succeeds,
@@ -89,7 +90,7 @@ Detect distributed sub-constitutions (each is a `<package>/.charter/constitution
 file, recursive up to 5 package levels) and let the user enable the feature:
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/distributed-detect.sh "$(pwd)"
+{SCRIPT} distributed-detect "$(pwd)"
 ```
 
 If one or more are found, display them:
@@ -106,9 +107,9 @@ choice:
 
 ```bash
 # yes:
-bash .specify/extensions/charter/scripts/bash/config-distributed-set.sh true "$(pwd)"
+{SCRIPT} config-distributed-set true "$(pwd)"
 # no (or default):
-bash .specify/extensions/charter/scripts/bash/config-distributed-set.sh false "$(pwd)"
+{SCRIPT} config-distributed-set false "$(pwd)"
 ```
 
 **1a.3 — List available fragments**
@@ -118,14 +119,14 @@ enabled), and detect any existing non-placeholder local constitution:
 
 ```bash
 # Fragments + sub-constitutions, tab-separated: TYPE<TAB>CATEGORY<TAB>PATH<TAB>NAME
-bash .specify/extensions/charter/scripts/bash/fragment-list.sh "$(pwd)"
+{SCRIPT} fragment-list "$(pwd)"
 
 # Distributed sub-constitutions (only relevant when enabled). One path per line.
-bash .specify/extensions/charter/scripts/bash/distributed-detect.sh "$(pwd)"
+{SCRIPT} distributed-detect "$(pwd)"
 
 # Detect an existing local constitution.
 # Exit code: 0 = placeholder (skip), 1 = usable, 2 = no file.
-bash .specify/extensions/charter/scripts/bash/constitution-is-placeholder.sh
+{SCRIPT} constitution-is-placeholder
 echo "placeholder_check_exit=$?"
 ```
 
@@ -184,7 +185,7 @@ Get the stripped local constitution content (only if the user selected
 `<CURRENT PROJECT CONSTITUTION>`):
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/constitution-strip-local.sh
+{SCRIPT} constitution-strip-local
 ```
 
 **ID format rules for state YAML:**
@@ -195,7 +196,7 @@ bash .specify/extensions/charter/scripts/bash/constitution-strip-local.sh
 Write the assembled YAML to the state file (content via stdin):
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/state-write.sh "$(pwd)" << 'STATEEOF'
+{SCRIPT} state-write "$(pwd)" << 'STATEEOF'
 <GENERATED_YAML_CONTENT>
 STATEEOF
 ```
@@ -205,7 +206,7 @@ STATEEOF
 Compute the total size from the saved state:
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/compose-size-check.sh "$(pwd)"
+{SCRIPT} compose-size-check "$(pwd)"
 ```
 
 Display the composition summary in the standard format:
@@ -244,7 +245,7 @@ timestamped copy to `.specify/charter/backups/` (and no-ops if there's no
 constitution yet), printing the backup path:
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/constitution-backup.sh "$(pwd)"
+{SCRIPT} constitution-backup "$(pwd)"
 ```
 
 ### Step 3: Detect Current Mode
@@ -252,7 +253,7 @@ bash .specify/extensions/charter/scripts/bash/constitution-backup.sh "$(pwd)"
 Read the existing constitution and check for section markers:
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/constitution-parse.sh
+{SCRIPT} constitution-parse
 ```
 
 `constitution-parse.sh` prints `FILE_EXISTS=true|false`, `HAS_SECTIONS=true|false`,
@@ -276,7 +277,7 @@ In override mode, compare each **fragment** section in the current constitution 
 each fragment section against its snapshot, and reports the result:
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/snapshot-detect-modified.sh "$(pwd)"
+{SCRIPT} snapshot-detect-modified "$(pwd)"
 ```
 
 It prints `MODIFIED=true` followed by one `MODIFIED_SECTION=<name>` line per
@@ -308,7 +309,7 @@ Options:
 Before proceeding, if the constitution contains a `<!-- [PROJECT SPECIFIC] SECTION -->` marker, extract its current content and update the `local_constitution_content` in the state file. This ensures the latest local constitution edits are always preserved:
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/constitution-extract.sh "PROJECT SPECIFIC" .specify/memory/constitution.md
+{SCRIPT} constitution-extract "PROJECT SPECIFIC" .specify/memory/constitution.md
 ```
 
 Write the extracted content back into `local_constitution_content` via `state-write.sh`.
@@ -336,7 +337,7 @@ Determine whether to use registry versions or snapshot versions for each **fragm
 - **RECREATION MODE**: Use previously saved snapshots for fragments. Check which fragments in the state are missing a snapshot:
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/snapshot-list-missing.sh "$(pwd)"
+{SCRIPT} snapshot-list-missing "$(pwd)"
 ```
 
 It prints `MISSING_SNAPSHOTS=true` followed by one `MISSING=<name>` line per
@@ -366,14 +367,14 @@ When the target is a registry sub-constitution, its state ID has the form `sub-c
 
 ```bash
 # Refresh the registry cache (no-op for local path registries)
-bash .specify/extensions/charter/scripts/bash/registry-fetch.sh "$(pwd)" >/dev/null
+{SCRIPT} registry-fetch "$(pwd)" >/dev/null
 
 # Fragment: <TYPE> = fragment
-bash .specify/extensions/charter/scripts/bash/fragment-read.sh "<FRAGMENT_NAME>" "fragment" "$(pwd)"
+{SCRIPT} fragment-read "<FRAGMENT_NAME>" "fragment" "$(pwd)"
 
 # Registry sub-constitution: strip "sub-constitutions/" prefix first
 # SC_ID from state: "sub-constitutions/packages_auth" → NAME = "packages_auth"
-bash .specify/extensions/charter/scripts/bash/fragment-read.sh "<NAME>" "sub-constitution" "$(pwd)"
+{SCRIPT} fragment-read "<NAME>" "sub-constitution" "$(pwd)"
 ```
 
 For full compose (CREATION or RECREATION MODE), read ALL fragments and sub-constitutions and build the complete constitution content.
@@ -387,9 +388,9 @@ For each **registry sub-constitution** listed in `sub_constitutions`, ALWAYS rea
 The state stores IDs as `sub-constitutions/<name>`. Strip the `sub-constitutions/` prefix to get the filename passed to `fragment-read.sh`:
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/registry-fetch.sh "$(pwd)" >/dev/null
+{SCRIPT} registry-fetch "$(pwd)" >/dev/null
 # SC_ID from state: "sub-constitutions/packages_auth" → NAME = "packages_auth"
-bash .specify/extensions/charter/scripts/bash/fragment-read.sh "<NAME>" "sub-constitution" "$(pwd)"
+{SCRIPT} fragment-read "<NAME>" "sub-constitution" "$(pwd)"
 ```
 
 For each **distributed sub-constitution** listed in `distributed_sub_constitutions`, ALWAYS read the latest content from the package's local file (cacheless).
@@ -398,7 +399,7 @@ The state stores IDs as `<package_path>/.charter/constitution`. Strip the `/.cha
 
 ```bash
 # DSC_ID from state: "packages/auth/.charter/constitution" → PACKAGE_PATH = "packages/auth"
-bash .specify/extensions/charter/scripts/bash/distributed-read.sh "<PACKAGE_PATH>" "$(pwd)"
+{SCRIPT} distributed-read "<PACKAGE_PATH>" "$(pwd)"
 ```
 
 ### Step 7: Save Snapshots
@@ -407,7 +408,7 @@ For CREATION MODE and UPDATE MODE, save snapshots of all **fragments** being use
 
 ```bash
 # For each fragment used:
-bash .specify/extensions/charter/scripts/bash/snapshot-save.sh "<FRAGMENT_NAME>" "fragment" "$(pwd)"
+{SCRIPT} snapshot-save "<FRAGMENT_NAME>" "fragment" "$(pwd)"
 ```
 
 > Do NOT snapshot sub-constitutions (registry or distributed). They are cacheless
@@ -430,7 +431,7 @@ Before assembling each section into the final constitution, **normalize its head
 **Use the shared script** — pipe each section's raw content through it:
 
 ```bash
-NORMALIZED_CONTENT="$(printf '%s' "$RAW_CONTENT" | bash .specify/extensions/charter/scripts/bash/heading-normalize.sh 2)"
+NORMALIZED_CONTENT="$(printf '%s' "$RAW_CONTENT" | {SCRIPT} heading-normalize 2)"
 ```
 
 The script handles all edge cases correctly, including fence-aware heading detection (see below). Do not reimplement the algorithm inline.
@@ -532,7 +533,7 @@ After `/speckit.constitution` completes, validate the generated constitution.
 constitution is included) and verifies each has a section marker:
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/constitution-validate-sections.sh "$(pwd)"
+{SCRIPT} constitution-validate-sections "$(pwd)"
 ```
 
 It prints `VALID=true` on success, or `VALID=false` with one `MISSING=<name>`

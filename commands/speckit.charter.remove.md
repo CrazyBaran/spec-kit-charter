@@ -1,7 +1,8 @@
 ---
 description: "Remove a fragment or sub-constitution section from the composed constitution"
 scripts:
-  sh: ../../scripts/bash/charter-common.sh
+  sh: bash scripts/bash/charter.sh
+  py: scripts/python/charter.py
 ---
 
 # Charter Remove
@@ -26,7 +27,7 @@ The argument MUST be the name of a fragment, registry sub-constitution, or distr
 The argument is the name of the fragment or sub-constitution to remove.
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/state-check.sh "$(pwd)"
+{SCRIPT} state-check "$(pwd)"
 ```
 
 If the output is `STATE_EXISTS=false`, the charter is not configured — display
@@ -60,7 +61,7 @@ Before removing, verify the fragment is not mandatory. `fragment-is-mandatory.sh
 checks the target against the registry manifest's mandatory list:
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/fragment-is-mandatory.sh "<SECTION_NAME>" "$(pwd)"
+{SCRIPT} fragment-is-mandatory "<SECTION_NAME>" "$(pwd)"
 ```
 
 It prints `MANDATORY=true` and exits `0` if the fragment is mandatory, or prints
@@ -94,7 +95,7 @@ cacheless, so there is no snapshot to remove for them.
 TARGET_NAME="<SECTION_NAME>"
 TYPE="<TYPE>"   # fragment | sub-constitution | distributed (known from the state list it was in)
 if [[ "$TYPE" == "fragment" ]]; then
-  bash .specify/extensions/charter/scripts/bash/snapshot-remove.sh "$TARGET_NAME" "fragment" "$(pwd)"
+  {SCRIPT} snapshot-remove "$TARGET_NAME" "fragment" "$(pwd)"
 fi
 ```
 
