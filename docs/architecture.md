@@ -57,7 +57,7 @@ The marker format is backwards-compatible: `constitution-parse.sh` and `constitu
 ### 4. Snapshot-Based Change Detection (fragments only)
 
 Rather than tracking fragment hashes, Charter saves full **fragment** content as
-"snapshots" after each compose. On subsequent composes, it compares each fragment
+“snapshots” after each compose. On subsequent composes, it compares each fragment
 section in the constitution against its snapshot to detect local modifications.
 This approach:
 
@@ -70,7 +70,7 @@ This approach:
 Both the normalization (`heading-normalize.sh`) and the comparison (`snapshot-compare.sh`) are **fence-aware**: lines inside fenced code blocks (` ``` ` / `~~~`) are never treated as headings. This prevents `#`-prefixed shell/Python/YAML comments inside code samples from corrupting heading-level calculations or producing false negatives in drift detection.
 
 Sub-constitutions (registry and distributed) are intentionally **not**
-snapshotted — see "Cacheless sub-constitutions" below.
+snapshotted — see “Cacheless sub-constitutions" below.
 
 ### 5. Cacheless Sub-Constitutions
 
