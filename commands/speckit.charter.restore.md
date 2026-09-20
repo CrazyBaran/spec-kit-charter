@@ -1,7 +1,8 @@
 ---
 description: "Restore the constitution to the last saved backup version"
 scripts:
-  sh: ../../scripts/bash/charter-common.sh
+  sh: bash scripts/bash/charter.sh
+  py: scripts/python/charter.py
 ---
 
 # Charter Restore
@@ -24,7 +25,7 @@ No arguments required. The most recent backup is used by default.
 ### Step 1: Find Available Backups
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/backup-list.sh "$(pwd)"
+{SCRIPT} backup-list "$(pwd)"
 ```
 
 `backup-list.sh` prints the available backups (newest first, up to 10) with their
@@ -41,7 +42,7 @@ Backups are created automatically when /speckit.charter.compose runs.
 Display information about the latest backup and the current constitution:
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/backup-preview.sh "$(pwd)"
+{SCRIPT} backup-preview "$(pwd)"
 ```
 
 `backup-preview.sh` prints the latest backup's metadata, the current
@@ -66,7 +67,7 @@ Proceed with restoration? (yes/no)
 ### Step 4: Restore the Backup
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/backup-restore.sh "$(pwd)"
+{SCRIPT} backup-restore "$(pwd)"
 ```
 
 `backup-restore.sh` first creates a safety backup of the current constitution

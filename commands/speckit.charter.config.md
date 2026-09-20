@@ -1,7 +1,8 @@
 ---
 description: "Configure the charter registry and select constitution fragments for composition"
 scripts:
-  sh: ../../scripts/bash/charter-common.sh
+  sh: bash scripts/bash/charter.sh
+  py: scripts/python/charter.py
 ---
 
 # Charter Configuration
@@ -26,7 +27,7 @@ The registry is the source of constitution fragments. It can be a local director
 1. Check if a charter configuration already exists by running:
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/registry-default.sh "$(pwd)"
+{SCRIPT} registry-default "$(pwd)"
 ```
 
 It prints `EXISTING_CONFIG=true|false` and a `registry: <value>` line (the
@@ -44,7 +45,7 @@ existing registry, or the default `.charter` proposal).
 4. Once the registry value is determined, write the configuration:
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/config-write.sh "<REGISTRY_VALUE>" "$(pwd)"
+{SCRIPT} config-write "<REGISTRY_VALUE>" "$(pwd)"
 ```
 
 ### Step 2: Validate Registry
@@ -54,7 +55,7 @@ resolves the local path, and verifies the structure (`manifest.yml` present with
 required `version` and `name` fields):
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/registry-validate.sh "$(pwd)"
+{SCRIPT} registry-validate "$(pwd)"
 ```
 
 On success it prints `VALID` along with `name=` and `version=`. On failure it
@@ -73,7 +74,7 @@ and let the user enable the feature.
 1. Search for distributed sub-constitutions (recursive, up to 5 package levels):
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/distributed-detect.sh "$(pwd)"
+{SCRIPT} distributed-detect "$(pwd)"
 ```
 
 Each output line is a package path (the directory containing a `.charter/constitution.md`), relative to the project root.
@@ -99,13 +100,13 @@ Enable distributed sub-constitutions? (yes/no) [default: no]
    - If the user answers **yes**:
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/config-distributed-set.sh true "$(pwd)"
+{SCRIPT} config-distributed-set true "$(pwd)"
 ```
 
    - If the user answers **no** (or presses Enter for the default):
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/config-distributed-set.sh false "$(pwd)"
+{SCRIPT} config-distributed-set false "$(pwd)"
 ```
 
 The flag is stored as `distributed_sub_constitutions` in
@@ -120,15 +121,15 @@ detect the distributed sub-constitutions.
 ```bash
 # Fragments + sub-constitutions, tab-separated: TYPE<TAB>CATEGORY<TAB>PATH<TAB>NAME
 # TYPE is one of: mandatory_fragment | recommended_fragment | fragment | sub-constitution
-bash .specify/extensions/charter/scripts/bash/fragment-list.sh "$(pwd)"
+{SCRIPT} fragment-list "$(pwd)"
 
 # Distributed sub-constitutions (only relevant when the feature is enabled).
 # One package path per line.
-bash .specify/extensions/charter/scripts/bash/distributed-detect.sh "$(pwd)"
+{SCRIPT} distributed-detect "$(pwd)"
 
 # Detect an existing local constitution.
 # Exit code: 0 = placeholder (skip), 1 = usable constitution, 2 = no file.
-bash .specify/extensions/charter/scripts/bash/constitution-is-placeholder.sh
+{SCRIPT} constitution-is-placeholder
 echo "placeholder_check_exit=$?"
 ```
 
@@ -253,14 +254,14 @@ local_constitution_content: |
   `Version/Ratified/Last Amended` footer removed) with:
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/constitution-strip-local.sh
+{SCRIPT} constitution-strip-local
 ```
 
 Write the assembled YAML to the state file (the script reads the content from
 stdin):
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/state-write.sh "$(pwd)" << 'STATEEOF'
+{SCRIPT} state-write "$(pwd)" << 'STATEEOF'
 <GENERATED_YAML_CONTENT>
 STATEEOF
 ```
@@ -275,7 +276,7 @@ Compute the total size (reads the just-saved state, sums all selected fragment
 content plus the local constitution):
 
 ```bash
-bash .specify/extensions/charter/scripts/bash/compose-size-check.sh "$(pwd)"
+{SCRIPT} compose-size-check "$(pwd)"
 ```
 
 This outputs `TOTAL_BYTES=<n>` and `EXCEEDS_32K=true|false`.

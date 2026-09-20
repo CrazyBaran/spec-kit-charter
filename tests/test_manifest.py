@@ -1,4 +1,7 @@
 """Tests for the Charter extension manifest and structure."""
+import py_compile
+import re
+
 import pytest
 from pathlib import Path
 import yaml
@@ -112,3 +115,65 @@ class TestFixtures:
         sub = EXTENSION_ROOT / "tests" / "fixtures" / "sample-registry" / "sub-constitutions"
         md_files = list(sub.glob("*.md"))
         assert len(md_files) >= 1
+
+
+COMMANDS_DIR = EXTENSION_ROOT / "commands"
+COMMAND_FILES = sorted(COMMANDS_DIR.glob("speckit.charter.*.md"))
+FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
+
+
+def _split_command(path: Path):
+    text = path.read_text(encoding="utf-8")  # universal newlines fold CRLF
+    match = FRONTMATTER_RE.match(text)
+    assert match, f"{path.name} has no frontmatter"
+    return yaml.safe_load(match.group(1)), text[match.end():]
+
+
+class TestCommandScripts:
+    """Every command routes helper scripts through the dispatchers via {SCRIPT}."""
+
+    def test_command_files_found(self):
+        assert len(COMMAND_FILES) == 5
+
+    @pytest.mark.parametrize("path", COMMAND_FILES, ids=lambda p: p.name)
+    def test_frontmatter_declares_sh_and_py(self, path):
+        frontmatter, _ = _split_command(path)
+        scripts = frontmatter["scripts"]
+        assert scripts == {
+            "sh": "bash scripts/bash/charter.sh",
+            "py": "scripts/python/charter.py",
+        }
+        for value in scripts.values():
+            assert (EXTENSION_ROOT / value.split()[-1]).is_file(), value
+
+    @pytest.mark.parametrize("path", COMMAND_FILES, ids=lambda p: p.name)
+    def test_no_hardcoded_bash_invocations(self, path):
+        _, body = _split_command(path)
+        assert "bash .specify/extensions/charter/" not in body
+        assert "scripts/bash/charter-common.sh" not in body
+
+    @pytest.mark.parametrize("path", COMMAND_FILES, ids=lambda p: p.name)
+    def test_script_placeholders_resolve(self, path):
+        _, body = _split_command(path)
+        names = re.findall(r"\{SCRIPT\} ([a-z0-9-]+)", body)
+        assert names, f"{path.name} never uses {{SCRIPT}}"
+        assert body.count("{SCRIPT}") == len(names), "every {SCRIPT} must be followed by a script name"
+        for name in names:
+            assert (EXTENSION_ROOT / "scripts" / "bash" / f"{name}.sh").is_file(), name
+            assert name not in ("charter", "charter-common")
+
+    def test_launcher_compiles(self):
+        py_compile.compile(str(EXTENSION_ROOT / "scripts" / "python" / "charter.py"), doraise=True)
+
+    def test_manifest_version_not_behind_changelog(self):
+        changelog = (EXTENSION_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+        released = re.findall(r"^## \[(\d+)\.(\d+)\.(\d+)\]", changelog, re.MULTILINE)
+        assert released, "CHANGELOG has no released version headings"
+        newest_released = tuple(int(part) for part in released[0])
+        with open(EXTENSION_ROOT / "extension.yml", encoding="utf-8") as f:
+            version = yaml.safe_load(f)["extension"]["version"]
+        manifest_version = tuple(int(part) for part in version.split("."))
+        assert manifest_version >= newest_released, (
+            f"extension.yml declares {version} but CHANGELOG's newest release is "
+            f"{'.'.join(released[0])}"
+        )

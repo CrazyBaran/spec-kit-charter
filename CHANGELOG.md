@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Python runtime support.** Projects initialised with `specify init --script py`
+  now get Charter commands that run through `scripts/python/charter.py`. In this
+  release the launcher still executes the bash helper scripts, so bash (Git for
+  Windows on Windows) must be available; native Python ports will follow one
+  script at a time behind the same entry point. Set `CHARTER_BASH` to point the
+  launcher at a specific bash executable.
+- **`charter.sh` dispatcher.** Command files now reference a single
+  `scripts/bash/charter.sh <script-name>` entry point through Spec Kit's
+  `{SCRIPT}` placeholder instead of hard-coding each helper script path.
+
+### Changed
+
+- **Minimum Spec Kit version raised to 0.12.6.** The command files now rely on
+  Spec Kit's `{SCRIPT}` placeholder and extension-local script path rewriting,
+  which older releases do not perform.
+
+### Fixed
+
+- Charter commands were silently not registered in Windows projects initialised
+  with `--script py`, because the command frontmatter declared no `py:` script
+  and Spec Kit found no runnable variant.
+- Command frontmatter pointed at `../../scripts/bash/charter-common.sh`, which
+  Spec Kit rewrites to a core-scripts path that does not exist.
+
 ## [0.6.0] - 2026-08-21
 
 ### Added
